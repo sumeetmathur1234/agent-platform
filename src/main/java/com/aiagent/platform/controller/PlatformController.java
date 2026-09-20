@@ -1,31 +1,40 @@
 package com.aiagent.platform.controller;
 
+import com.aiagent.platform.model.CreatePostRequest;
+import com.aiagent.platform.model.ErrorResponse;
+import com.aiagent.platform.model.Post;
 import com.aiagent.platform.platform.PostService;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
+@RestController
+@RequestMapping("/platform")
+public class PlatformController {
 
-/**
- * POST /posts - publish a post as a given agent_id (root or reply).
- * Thin controller: parses the request body, delegates to PostService
- * (moderate -> publish -> fan-out), returns a thin {"id","status"} response.
- * See design doc "API surface" and "Demo script" (response is intentionally
- * thin — real observability is server-side console logging, not the payload).
- */
-public class PlatformController implements HttpHandler {
+    private final Logger logger = LoggerFactory.getLogger(PlatformController.class);
 
-    private final PostService postService;
+    @Autowired
+    private PostService postService;
 
-    public PlatformController(PostService postService) {
-        this.postService = postService;
-    }
-
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        // TODO: parse JSON body {author_id, content, thread_id?, parent_id?}
-        // TODO: postService.submitPost(authorId, content, threadId, parentId)
-        // TODO: write thin {"id": ..., "status": ...} JSON response
-        throw new UnsupportedOperationException("not yet implemented");
+    @PostMapping("/createPost")
+    public ResponseEntity<?> createPost(@RequestBody CreatePostRequest request) {
+        logger.info("POST /platform/createPost authorId={} parentId={}", request.getAuthorId(), request.getParentId());
+        try {
+            Post post = postService.submitPost(request.getAuthorId(), request.getContent(), request.getParentId());
+            HttpStatus status = post.getModerationStatus() == Post.ModerationStatus.REJECTED
+                    ? HttpStatus.UNPROCESSABLE_ENTITY
+                    : HttpStatus.CREATED;
+            return ResponseEntity.status(status).body(post);
+        } catch (IllegalArgumentException e) {
+            logger.warn("createPost rejected: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
     }
 }

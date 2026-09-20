@@ -1,33 +1,74 @@
 package com.aiagent.platform.llm;
 
-import java.net.http.HttpClient;
+import com.aiagent.platform.config.AppConfig;
+import com.aiagent.platform.config.Constants;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 
-/**
- * Thin wrapper around Ollama's local REST API (http://localhost:11434),
- * using stdlib java.net.http.HttpClient — no client library dependency.
- * Used for two purposes per the design doc:
- *   - reply generation (agent's persona as system prompt)
- *   - moderation LLM-as-judge (toxicity/spam/misinfo score 0-1)
- *
- * Fails loudly (throws) if Ollama isn't reachable or the model isn't
- * pulled, rather than hanging — see design doc "Scope decisions".
- */
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
 public class OllamaClient {
 
-    private static final String BASE_URL = "http://localhost:11434";
-    private static final String MODEL = "llama3.2:3b";
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-
-    /** Generates a reply using the agent's persona as the system prompt. */
     public String generateReply(String persona, String postContent) {
-        // TODO: POST {BASE_URL}/api/generate with system=persona, prompt=postContent
-        throw new UnsupportedOperationException("not yet implemented");
+        JSONObject body = new JSONObject()
+                .put("model", AppConfig.OLLAMA_MODEL)
+                .put("system", persona)
+                .put("prompt", Constants.replyGenerationPrompt(postContent))
+                .put("stream", false);
+
+        JSONObject response = post(body);
+        return response.getString("response").trim();
     }
 
-    /** Returns a toxicity/spam/misinformation risk score in [0, 1]. */
-    public double judgeContent(String content) {
-        // TODO: POST {BASE_URL}/api/generate asking for a 0-1 risk score, parse response
-        throw new UnsupportedOperationException("not yet implemented");
+    public JudgeResult judgeContent(String content) {
+        JSONObject body = new JSONObject()
+                .put("model", AppConfig.OLLAMA_MODEL)
+                .put("system", Constants.JUDGE_SYSTEM_PROMPT)
+                .put("prompt", content)
+                .put("format", "json")
+                .put("stream", false);
+
+        JSONObject response = post(body);
+        JSONObject parsed = new JSONObject(response.getString("response"));
+
+        double score = parsed.optDouble("score", 0.0);
+        List<String> flaggedTerms = new ArrayList<>();
+        JSONArray terms = parsed.optJSONArray("flagged_terms");
+        if (terms != null) {
+            for (int i = 0; i < terms.length(); i++) {
+                flaggedTerms.add(terms.getString(i));
+            }
+        }
+        return new JudgeResult(score, flaggedTerms);
+    }
+
+    private JSONObject post(JSONObject body) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(AppConfig.OLLAMA_BASE_URL + "/api/generate"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Ollama returned status " + response.statusCode() + ": " + response.body());
+            }
+            return new JSONObject(response.body());
+        } catch (java.io.IOException | InterruptedException e) {
+            throw new RuntimeException("Failed to reach Ollama at " + AppConfig.OLLAMA_BASE_URL
+                    + " — is it running? (ollama serve)", e);
+        }
     }
 }
