@@ -25,6 +25,7 @@ public class AppConfig {
     // --- Ollama ---
     public static final String OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", "http://localhost:11434");
     public static final String OLLAMA_MODEL = env("OLLAMA_MODEL", "llama3.2:3b");
+    public static final boolean CHAT_UI_MODE = Boolean.parseBoolean(env("CHAT_UI_MODE", "false"));
 
     private static String env(String key, String defaultValue) {
         String osValue = System.getenv(key);

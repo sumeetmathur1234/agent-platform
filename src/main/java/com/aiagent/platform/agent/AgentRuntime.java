@@ -1,5 +1,6 @@
 package com.aiagent.platform.agent;
 
+import com.aiagent.platform.config.AppConfig;
 import com.aiagent.platform.config.Constants;
 import com.aiagent.platform.db.PostRepository;
 import com.aiagent.platform.db.RelevanceLogRepository;
@@ -55,14 +56,18 @@ public class AgentRuntime implements AgentListener {
         // Loop-control: already replied in this thread?
         if (postRepository.countByAuthorAndThread(agent.getName(), post.getThreadId()) > 0) {
             logRelevance(post, 0, 0, RelevanceLogEntry.Decision.SKIPPED);
-            System.out.println("[relevance] agent=" + agent.getName() + " already replied in thread " + post.getThreadId() + " -> skipped");
+            if (!AppConfig.CHAT_UI_MODE) {
+                System.out.println("[relevance] agent=" + agent.getName() + " already replied in thread " + post.getThreadId() + " -> skipped");
+            }
             return;
         }
 
         // Loop-control: past max depth to reply?
         if (post.getDepth() >= Constants.MAX_THREAD_DEPTH) {
             logRelevance(post, 0, 0, RelevanceLogEntry.Decision.SKIPPED);
-            System.out.println("[relevance] agent=" + agent.getName() + " post at max depth -> skipped");
+            if (!AppConfig.CHAT_UI_MODE) {
+                System.out.println("[relevance] agent=" + agent.getName() + " post at max depth -> skipped");
+            }
             return;
         }
 
@@ -70,18 +75,24 @@ public class AgentRuntime implements AgentListener {
 
         if (!score.aboveThreshold()) {
             logRelevance(post, score.topicScore(), score.occasionScore(), RelevanceLogEntry.Decision.SKIPPED);
-            System.out.println("[relevance] agent=" + agent.getName()
-                    + " topic=" + round(score.topicScore()) + " occasion=" + round(score.occasionScore())
-                    + " -> below threshold, skipped");
+            if (!AppConfig.CHAT_UI_MODE) {
+                System.out.println("[relevance] agent=" + agent.getName()
+                        + " topic=" + round(score.topicScore()) + " occasion=" + round(score.occasionScore())
+                        + " -> below threshold, skipped");
+            }
             return;
         }
 
-        System.out.println("[relevance] agent=" + agent.getName()
-                + " topic=" + round(score.topicScore()) + " occasion=" + round(score.occasionScore())
-                + " -> above threshold, generating reply");
+        if (!AppConfig.CHAT_UI_MODE) {
+            System.out.println("[relevance] agent=" + agent.getName()
+                    + " topic=" + round(score.topicScore()) + " occasion=" + round(score.occasionScore())
+                    + " -> above threshold, generating reply");
+        }
 
         String replyText = ollamaClient.generateReply(agent.getPersona(), post.getContent());
-        System.out.println("[reply-draft] agent=" + agent.getName() + ": \"" + replyText + "\"");
+        if (!AppConfig.CHAT_UI_MODE) {
+            System.out.println("[reply-draft] agent=" + agent.getName() + ": \"" + replyText + "\"");
+        }
 
         logRelevance(post, score.topicScore(), score.occasionScore(), RelevanceLogEntry.Decision.REPLIED);
         postService.submitPost(agent.getName(), replyText, post.getId());

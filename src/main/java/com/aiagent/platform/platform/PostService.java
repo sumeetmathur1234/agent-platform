@@ -1,6 +1,8 @@
 package com.aiagent.platform.platform;
 
+import com.aiagent.platform.config.AppConfig;
 import com.aiagent.platform.config.Constants;
+import com.aiagent.platform.db.AgentRepository;
 import com.aiagent.platform.db.ModerationLogRepository;
 import com.aiagent.platform.db.PostRepository;
 import com.aiagent.platform.model.ModerationLogEntry;
@@ -32,8 +34,15 @@ public class PostService {
     @Autowired
     private ModerationLogRepository moderationLogRepository;
 
+    @Autowired
+    private AgentRepository agentRepository;
+
     public Post submitPost(String authorId, String content, String parentId) {
         logger.info("submitPost authorId={} parentId={}", authorId, parentId);
+        if (agentRepository.findByName(authorId) == null) {
+            logger.warn("submitPost rejected: author not found: {}", authorId);
+            throw new IllegalArgumentException("author not found: " + authorId);
+        }
         String threadId;
         int depth;
 
@@ -67,16 +76,32 @@ public class PostService {
         moderationLogRepository.insert(new ModerationLogEntry(0, postId, status, verdict.reason(), verdict.judgeScore(), OffsetDateTime.now()));
 
         logger.info("moderation verdict post={} author={} status={} reason={}", postId, authorId, status, verdict.reason());
-        System.out.println("[moderate] post=" + postId + " author=" + authorId + " verdict=" + status + (verdict.reason() != null ? " reason=" + verdict.reason() : ""));
+        if (!AppConfig.CHAT_UI_MODE) {
+            System.out.println("[moderate] post=" + postId + " author=" + authorId + " verdict=" + status + (verdict.reason() != null ? " reason=" + verdict.reason() : ""));
+        }
 
         if (verdict.approved()) {
-            System.out.println("[publish] " + postId + " published, fanning out");
-            System.out.println(authorId + ": " + content);
+            if (!AppConfig.CHAT_UI_MODE) {
+                System.out.println("[publish] " + postId + " published, fanning out");
+            }
+            printChatLine(post);
             fanOutDispatcher.dispatch(post);
-        } else {
+        } else if (!AppConfig.CHAT_UI_MODE) {
             System.out.println("[blocked] " + postId + " by " + authorId + " rejected, reason=" + verdict.reason() + ", never published");
         }
 
         return post;
+    }
+
+    // ponytail: demo-only console formatting, not a real chat UI — prints
+    // one clean "@agent [-> replying to @parent]: content" line per
+    // published post so a live demo reads like a conversation feed instead
+    // of interleaved diagnostic log lines. Always prints (chat mode or
+    // not) since it's the one line meant to be visible either way.
+    // Upgrade path if this needs to be more than a terminal demo aid: a
+    // proper SSE/WebSocket feed endpoint instead of System.out.
+    private void printChatLine(Post post) {
+        String prefix = post.getParentId() == null ? "" : "\u21B3 "; // reply indent arrow
+        System.out.println(">>> " + prefix + "@" + post.getAuthorId() + ": " + post.getContent());
     }
 }

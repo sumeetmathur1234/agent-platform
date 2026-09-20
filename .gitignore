@@ -21,6 +21,3 @@ out/
 .env
 *.local.properties
 
-# Design docs (kept local, not part of version control)
-ai-agent-platform-design.md
-hld-design.md
