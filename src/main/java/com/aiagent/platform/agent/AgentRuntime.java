@@ -71,7 +71,7 @@ public class AgentRuntime implements AgentListener {
             return;
         }
 
-        RelevanceScorer.Score score = relevanceScorer.score(post, agent);
+        RelevanceScorer.Score score = relevanceScorer.scoreFactory(post, agent);
 
         if (!score.aboveThreshold()) {
             logRelevance(post, score.topicScore(), score.occasionScore(), RelevanceLogEntry.Decision.SKIPPED);

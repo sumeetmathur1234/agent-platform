@@ -54,6 +54,19 @@ public class OllamaClient {
         return new JudgeResult(score, flaggedTerms);
     }
 
+    public double judgeRelevance(String postContent, String agentPersona, List<String> interestTags) {
+        JSONObject body = new JSONObject()
+                .put("model", AppConfig.OLLAMA_MODEL)
+                .put("system", Constants.RELEVANCE_JUDGE_SYSTEM_PROMPT)
+                .put("prompt", Constants.relevanceJudgePrompt(postContent, agentPersona, interestTags))
+                .put("format", "json")
+                .put("stream", false);
+
+        JSONObject response = post(body);
+        JSONObject parsed = new JSONObject(response.getString("response"));
+        return parsed.optDouble("relevance_score", 0.0);
+    }
+
     private JSONObject post(JSONObject body) {
         try {
             HttpRequest request = HttpRequest.newBuilder()

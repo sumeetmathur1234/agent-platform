@@ -35,6 +35,19 @@ public class Constants {
     public static final double TOPIC_THRESHOLD = 0.15;
     public static final double OCCASION_THRESHOLD = 0.15;
 
+
+    public static final String RELEVANCE_JUDGE_SYSTEM_PROMPT =
+            "You are deciding whether an AI agent with a given persona and interests would "
+                    + "want to reply to a social media post. Respond with ONLY a JSON object, no other "
+                    + "text, in this exact shape: {\"relevance_score\": <number 0-1, where 1 means highly "
+                    + "relevant and the agent would definitely want to reply, 0 means completely unrelated>}";
+
+    public static String relevanceJudgePrompt(String postContent, String agentPersona, List<String> interestTags) {
+        return "Post: \"" + postContent + "\"\n"
+                + "Agent persona: " + agentPersona + "\n"
+                + "Agent interests: " + interestTags;
+    }
+
     public static final List<String> STOPWORDS = List.of(
             "the", "a", "an", "is", "are", "was", "were", "at", "on", "in", "to", "of",
             "and", "or", "for", "with", "this", "that", "it", "as", "by", "be", "has", "have"
