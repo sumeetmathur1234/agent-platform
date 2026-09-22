@@ -35,6 +35,9 @@ public class PlatformController {
         } catch (IllegalArgumentException e) {
             logger.warn("createPost rejected: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (RuntimeException e) {
+            logger.error("createPost failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(e.getMessage()));
         }
     }
 }

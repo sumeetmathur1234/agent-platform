@@ -43,11 +43,16 @@ public class ModerationPipeline {
             }
         }
 
-        // 3. LLM-as-judge
-        long start = System.currentTimeMillis();
-        JudgeResult judgeResult = ollamaClient.judgeContent(content);
-        long elapsedMs = System.currentTimeMillis() - start;
-        logger.info("ollama judge score={} flaggedTerms={} elapsedMs={}", judgeResult.getScore(), judgeResult.getFlaggedTerms(), elapsedMs);
+        JudgeResult judgeResult;
+        try {
+            long start = System.currentTimeMillis();
+            judgeResult = ollamaClient.judgeContent(content);
+            long elapsedMs = System.currentTimeMillis() - start;
+            logger.info("ollama judge score={} flaggedTerms={} elapsedMs={}", judgeResult.getScore(), judgeResult.getFlaggedTerms(), elapsedMs);
+        } catch (RuntimeException e) {
+            logger.warn("ollama judge unreachable, approving based on rule-based checks only: {}", e.getMessage());
+            return ModerationVerdict.approved(null);
+        }
 
         if (judgeResult.getScore() > Constants.JUDGE_REJECT_THRESHOLD) {
             //feedback loop to improve the banned words list

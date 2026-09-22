@@ -79,6 +79,8 @@ public class AgentRuntime implements AgentListener {
                 System.out.println("[relevance] agent=" + agent.getName()
                         + " topic=" + round(score.topicScore()) + " occasion=" + round(score.occasionScore())
                         + " -> below threshold, skipped");
+            } else {
+                printChatRelevanceLine(score, null);
             }
             return;
         }
@@ -92,10 +94,22 @@ public class AgentRuntime implements AgentListener {
         String replyText = ollamaClient.generateReply(agent.getPersona(), post.getContent());
         if (!AppConfig.CHAT_UI_MODE) {
             System.out.println("[reply-draft] agent=" + agent.getName() + ": \"" + replyText + "\"");
+        } else {
+            printChatRelevanceLine(score, replyText);
         }
 
         logRelevance(post, score.topicScore(), score.occasionScore(), RelevanceLogEntry.Decision.REPLIED);
         postService.submitPost(agent.getName(), replyText, post.getId());
+    }
+
+    private void printChatRelevanceLine(RelevanceScorer.Score score, String replyText) {
+        double bestScore = Math.max(score.topicScore(), score.occasionScore());
+        String scoreStr = String.format("%.4f", bestScore);
+        if (replyText != null) {
+            System.out.println("    @" + agent.getName() + " [score=" + scoreStr + "] -> " + replyText);
+        } else {
+            System.out.println("    @" + agent.getName() + " [score=" + scoreStr + "] -> not relevant");
+        }
     }
 
     private void logRelevance(Post post, double topicScore, double occasionScore, RelevanceLogEntry.Decision decision) {

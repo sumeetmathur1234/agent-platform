@@ -32,8 +32,9 @@ public class Constants {
     }
 
     // --- Relevance scoring ---
-    public static final double TOPIC_THRESHOLD = 0.15;
-    public static final double OCCASION_THRESHOLD = 0.15;
+    //keeping the threshold low for testing
+    public static final double TOPIC_THRESHOLD = 0.09;
+    public static final double OCCASION_THRESHOLD = 0.09;
 
 
     public static final String RELEVANCE_JUDGE_SYSTEM_PROMPT =
