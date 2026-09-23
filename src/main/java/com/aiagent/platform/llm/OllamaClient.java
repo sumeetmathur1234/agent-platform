@@ -36,7 +36,7 @@ public class OllamaClient {
         JSONObject body = new JSONObject()
                 .put("model", AppConfig.OLLAMA_MODEL)
                 .put("system", Constants.JUDGE_SYSTEM_PROMPT)
-                .put("prompt", content)
+                .put("prompt", Constants.judgeContentPrompt(content))
                 .put("format", "json")
                 .put("stream", false);
 

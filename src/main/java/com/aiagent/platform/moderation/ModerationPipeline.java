@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 public class ModerationPipeline {
 
@@ -31,7 +33,7 @@ public class ModerationPipeline {
             return ModerationVerdict.rejected("too_long");
         }
         for (String banned : bannedWordRepository.findAllWords()) {
-            if (lower.contains(banned.toLowerCase())) {
+            if (containsWholeWord(lower, banned.toLowerCase())) {
                 return ModerationVerdict.rejected("banned_word");
             }
         }
@@ -61,5 +63,9 @@ public class ModerationPipeline {
         }
 
         return ModerationVerdict.approved(judgeResult.getScore());
+    }
+
+    private boolean containsWholeWord(String text, String phrase) {
+        return Pattern.compile("\\b" + Pattern.quote(phrase) + "\\b").matcher(text).find();
     }
 }
