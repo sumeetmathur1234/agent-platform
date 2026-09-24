@@ -1,5 +1,6 @@
 package com.aiagent.platform.moderation;
 
+import com.aiagent.platform.config.AppConfig;
 import com.aiagent.platform.config.Constants;
 import com.aiagent.platform.db.BannedWordRepository;
 import com.aiagent.platform.llm.JudgeResult;
@@ -56,7 +57,7 @@ public class ModerationPipeline {
             return ModerationVerdict.approved(null);
         }
 
-        if (judgeResult.getScore() > Constants.JUDGE_REJECT_THRESHOLD) {
+        if (judgeResult.getScore() > AppConfig.JUDGE_REJECT_THRESHOLD) {
             //feedback loop to improve the banned words list
             bannedWordLearner.learn(judgeResult.getFlaggedTerms());
             return ModerationVerdict.rejected("toxic", judgeResult.getScore());

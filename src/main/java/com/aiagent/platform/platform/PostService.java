@@ -43,6 +43,16 @@ public class PostService {
             logger.warn("submitPost rejected: author not found: {}", authorId);
             throw new IllegalArgumentException("author not found: " + authorId);
         }
+
+        OffsetDateTime windowStart = OffsetDateTime.now().minusSeconds(Constants.RATE_LIMIT_WINDOW_SECONDS);
+        int recentPosts = postRepository.countByAuthorSince(authorId, windowStart);
+        if (recentPosts >= Constants.RATE_LIMIT_MAX_POSTS) {
+            logger.warn("submitPost rejected: rate limit exceeded for author={} ({} posts in last {}s)",
+                    authorId, recentPosts, Constants.RATE_LIMIT_WINDOW_SECONDS);
+            throw new IllegalArgumentException("rate limit exceeded: max " + Constants.RATE_LIMIT_MAX_POSTS
+                    + " posts per " + Constants.RATE_LIMIT_WINDOW_SECONDS + "s");
+        }
+
         String threadId;
         int depth;
 

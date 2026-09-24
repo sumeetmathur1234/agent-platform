@@ -1,5 +1,6 @@
 package com.aiagent.platform.moderation;
 
+import com.aiagent.platform.config.Constants;
 import com.aiagent.platform.db.BannedWordRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,13 @@ public class BannedWordLearner {
                 continue;
             }
             try {
+                int currentCount = bannedWordRepository.countBySource("llm_feedback");
+                if (currentCount >= Constants.MAX_LLM_FEEDBACK_BANNED_WORDS) {
+                    logger.warn("[feedback] MAX_LLM_FEEDBACK_BANNED_WORDS ({}) reached, dropping learned term \"{}\" — "
+                            + "existing rules still apply, no new ones added until reviewed/pruned",
+                            Constants.MAX_LLM_FEEDBACK_BANNED_WORDS, normalized);
+                    continue;
+                }
                 bannedWordRepository.addIfAbsent(normalized, "llm_feedback");
                 logger.info("[feedback] learned banned word/phrase from LLM rejection: \"{}\"", normalized);
             } catch (Exception e) {

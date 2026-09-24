@@ -20,6 +20,8 @@ public class AppConfig {
 
     public static final String RELEVANCE_SCORER_VERSION = env("RELEVANCE_SCORER_VERSION", "v1");
 
+    public static final double JUDGE_REJECT_THRESHOLD = Double.parseDouble(env("JUDGE_REJECT_THRESHOLD", "0.7"));
+
     private static String env(String key, String defaultValue) {
         String osValue = System.getenv(key);
         if (osValue != null && !osValue.isBlank()) {

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 CREATE INDEX idx_posts_thread ON posts(thread_id);
 CREATE INDEX idx_posts_author_thread ON posts(author_id, thread_id);  -- cooldown lookups
+CREATE INDEX idx_posts_author_created ON posts(author_id, created_at);  -- per-author rate limit lookups
 
 CREATE TABLE IF NOT EXISTS relevance_log (
     id              INT AUTO_INCREMENT PRIMARY KEY,

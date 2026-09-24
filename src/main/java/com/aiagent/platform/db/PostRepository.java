@@ -81,6 +81,20 @@ public class PostRepository {
         }
     }
 
+    public int countByAuthorSince(String authorId, OffsetDateTime since) {
+        String sql = "SELECT count(*) FROM posts WHERE author_id = ? AND created_at >= ?";
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, authorId);
+            stmt.setTimestamp(2, java.sql.Timestamp.from(since.toInstant()));
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to count recent posts for " + authorId, e);
+        }
+    }
+
     private Post mapRow(ResultSet rs) throws SQLException {
         OffsetDateTime createdAt = rs.getTimestamp("created_at").toInstant().atOffset(
                 OffsetDateTime.now().getOffset());

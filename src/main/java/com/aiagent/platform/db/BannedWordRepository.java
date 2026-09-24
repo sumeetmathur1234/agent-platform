@@ -38,4 +38,17 @@ public class BannedWordRepository {
             throw new RuntimeException("Failed to add banned word " + word, e);
         }
     }
+
+    public int countBySource(String source) {
+        String sql = "SELECT count(*) FROM banned_words WHERE source = ?";
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, source);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to count banned words for source " + source, e);
+        }
+    }
 }
